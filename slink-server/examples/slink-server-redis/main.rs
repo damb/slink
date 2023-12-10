@@ -1,10 +1,9 @@
-use std::collections::HashMap;
-
+use tokio::sync::mpsc::Sender;
 use tracing::info;
 use tracing_subscriber;
 
-use slink::Station;
-use slink_server::{ClientId, SeedLinkServer};
+use slink::{ProtocolErrorV4, SeedLinkPacketV4, Station};
+use slink_server::{DataTransferMode, SeedLinkServer, Select};
 
 use slink::DEFAULT_PORT;
 
@@ -13,9 +12,7 @@ use slink::DEFAULT_PORT;
 struct Client;
 
 #[derive(Debug, Default)]
-struct SeedLinkServerBackend {
-    clients: HashMap<ClientId, Client>,
-}
+struct SeedLinkServerBackend;
 
 #[slink_server::async_trait]
 impl SeedLinkServer for SeedLinkServerBackend {
@@ -34,18 +31,28 @@ impl SeedLinkServer for SeedLinkServerBackend {
     async fn inventory_stations(
         &self,
         station_pattern: &str,
-        stream_pattern: Option<String>,
-        format_subformat_pattern: Option<String>,
-    ) -> &Vec<Station> {
+        stream_pattern: &Option<String>,
+        format_subformat_pattern: &Option<String>,
+    ) -> Result<&Vec<Station>, ProtocolErrorV4> {
         todo!()
     }
 
+    /// Returns the inventory including stream related data.
     async fn inventory_streams(
         &self,
         station_pattern: &str,
-        stream_pattern: Option<String>,
-        format_subformat_pattern: Option<String>,
-    ) -> &Vec<Station> {
+        stream_pattern: &Option<String>,
+        format_subformat_pattern: &Option<String>,
+    ) -> Result<&Vec<Station>, ProtocolErrorV4> {
+        todo!()
+    }
+
+    async fn packets(
+        &mut self,
+        selects: Vec<Select>,
+        mode: DataTransferMode,
+        tx: Sender<Result<SeedLinkPacketV4, ProtocolErrorV4>>,
+    ) -> Result<(), ProtocolErrorV4> {
         todo!()
     }
 
@@ -58,7 +65,7 @@ impl SeedLinkServer for SeedLinkServerBackend {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let mut server = SeedLinkServerBackend::default();
+    let server = SeedLinkServerBackend::default();
 
     let (server_handle, join_handle) = slink_server::spawn_main_loop(server);
 

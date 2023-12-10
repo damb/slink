@@ -9,10 +9,12 @@ mod server;
 mod util;
 
 pub use accept::start_accept;
-pub use server::{spawn_main_loop, ServerHandle};
 pub use select::Select;
+pub use server::{spawn_main_loop, ServerHandle};
 
-use slink::{AuthV4, Station, ProtocolErrorV4};
+use tokio::sync::mpsc::Sender;
+
+use slink::{AuthV4, ProtocolErrorV4, SeedLinkPacketV4, Station};
 
 /// A re-export of [`async-trait`](https://docs.rs/async-trait) for convenience.
 pub use async_trait::async_trait;
@@ -25,6 +27,13 @@ pub const HIGHEST_SUPPORTED_PROTO_VERSION: (u8, u8) = (4, 0);
 /// Client identifier.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ClientId(usize);
+
+/// Enumeration of data transfer modes.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum DataTransferMode {
+    RealTime,
+    DialUp,
+}
 
 /// Trait implemented by SeedLink server implementations.
 ///
@@ -42,8 +51,6 @@ pub trait SeedLinkServer: Send + Sync + 'static {
     fn data_center_description(&self) -> &str;
 
     /// Authenticates a client.
-    ///
-    /// TODO(damb): support multiple protocol versions
     async fn authenticate(&self, auth: &AuthV4) -> Result<(), ProtocolErrorV4> {
         Err(ProtocolErrorV4::unsupported_command())
     }
@@ -52,17 +59,27 @@ pub trait SeedLinkServer: Send + Sync + 'static {
     async fn inventory_stations(
         &self,
         station_pattern: &str,
-        stream_pattern: Option<String>,
-        format_subformat_pattern: Option<String>,
+        stream_pattern: &Option<String>,
+        format_subformat_pattern: &Option<String>,
     ) -> Result<&Vec<Station>, ProtocolErrorV4>;
 
     /// Returns the inventory including stream related data.
     async fn inventory_streams(
         &self,
         station_pattern: &str,
-        stream_pattern: Option<String>,
-        format_subformat_pattern: Option<String>,
+        stream_pattern: &Option<String>,
+        format_subformat_pattern: &Option<String>,
     ) -> Result<&Vec<Station>, ProtocolErrorV4>;
+
+    /// Starts sending packets.
+    ///
+    /// TODO(damb): return an iterator instead?
+    async fn packets(
+        &mut self,
+        selects: Vec<Select>,
+        mode: DataTransferMode,
+        tx: Sender<Result<SeedLinkPacketV4, ProtocolErrorV4>>
+    ) -> Result<(), ProtocolErrorV4>;
 
     // async fn initialize(&self) -> SeedLinkResult<()>;
 

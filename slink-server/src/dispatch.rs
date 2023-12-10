@@ -53,7 +53,7 @@ impl<T: SeedLinkServer> Dispatcher<T> {
 
                 let stations = self
                     .server()
-                    .inventory_streams(&station_cmd.station_pattern, None, None)
+                    .inventory_streams(&station_cmd.station_pattern, &None, &None)
                     .await;
 
                 if let Err(err) = stations {
